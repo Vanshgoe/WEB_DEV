@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .input-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #TodoInput {
+            padding: 10px;
+            width: 250px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 2px solid #ccc;
+            outline: none;
+        }
+
+        #addBtn {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .board {
+            display: flex;
+            gap: 20px;
+        }
+
+        .column {
+            flex: 1;
+            min-height: 400px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            transition: 0.3s;
+        }
+
+        .column h2 {
+            text-align: center;
+        }
+
+        .highlight {
+            background-color: lightgreen;
+            border: 3px dashed green;
+        }
+
+        .Todo {
+            background-color: lightblue;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: grab;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Kanban Board</h1>
+
+    <div class="input-container">
+
+        <input type="text" id="TodoInput" placeholder="Add Todo">
+
+        <button id="addBtn" onclick="addTodo()">
+            Add
+        </button>
+
+    </div>
+
+    <div class="board">
+
+        <div class="column" id="todo">
+            <h2>TODO</h2>
+        </div>
+
+        <div class="column" id="doing">
+            <h2>DOING</h2>
+        </div>
+
+        <div class="column" id="done">
+            <h2>DONE</h2>
+        </div>
+
+    </div>
+
+    <script>
+
+        let Todo = JSON.parse(localStorage.getItem("Todo")) || [];
+                let draggedTodoId = null;
+                let editingTodoId = null;
+
+        function saveTodo() {
+
+            localStorage.setItem(
+                "Todo",
+                JSON.stringify(Todo)
+            );
+
+        }
+
+        function addTodo() {
+            
+            const input =
+                document.getElementById("TodoInput");
+
+            const text = input.value.trim();
+
+            if (text === "") return;
+            if (editingTodoId !== null) {
+
+                Todo = Todo.map(function (todo) {
+
+                    if (todo.id === editingTodoId) {
+
+                        return {
+                            ...todo,
+                            text: text
+                        };
+
+                    }
+
+                    return todo;
+
+                });
+
+                editingTodoId = null;
+
+            }
+            else {
+
+                const newTodo = {
+                    id: Date.now(),
+                    text: text,
+                    status: "todo"
+                };
+
+                Todo.push(newTodo);
+
+            }
+
+            saveTodo();
+
+            renderTodo();
+
+            input.value = "";
+
+        }
+        function modifyTodo(id) {
+
+            const todo = Todo.find(function (todo) {
+                return todo.id === id;
+            });
+
+            document.getElementById("TodoInput").value =
+                todo.text;
+
+            editingTodoId = id;
+
+        }
+        function deleteTodo(id) {
+
+            Todo = Todo.filter(function (Todo) {
+                return Todo.id !== id;
+            });
+
+            saveTodo();
+
+            renderTodo();
+
+        }
+
+        function renderTodo() {
+
+            document.getElementById("todo").innerHTML =
+                "<h2>TODO</h2>";
+
+            document.getElementById("doing").innerHTML =
+                "<h2>DOING</h2>";
+
+            document.getElementById("done").innerHTML =
+                "<h2>DONE</h2>";
+
+            Todo.forEach(function (Todo) {
+
+                const TodoElement =
+                    document.createElement("div");
+
+                TodoElement.classList.add("Todo");
+
+                TodoElement.setAttribute(
+                    "draggable",
+                    true
+                );
+
+                TodoElement.innerHTML = `
+
+          <span>${Todo.text}</span>
+
+          <button
+            class="delete-btn"
+            onclick="deleteTodo(${Todo.id})"
+          >
+            Delete
+          </button>
+          <button
+            class="delete-btn"
+            onclick="modifyTodo(${Todo.id})"
+          >
+            modify
+          </button>
+
+        `;
+
+                TodoElement.addEventListener(
+                    "dragstart",
+                    function () {
+
+                        draggedTodoId = Todo.id;
+
+                    }
+                );
+
+                document
+                    .getElementById(Todo.status)
+                    .appendChild(TodoElement);
+
+            });
+
+        }
+
+        const columns =
+            document.querySelectorAll(".column");
+
+        columns.forEach(function (column) {
+
+            column.addEventListener(
+                "dragover",
+                function (event) {
+
+                    event.preventDefault();
+
+                }
+            );
+
+            column.addEventListener(
+                "dragenter",
+                function () {
+
+                    column.classList.add("highlight");
+
+                }
+            );
+
+            column.addEventListener(
+                "dragleave",
+                function () {
+
+                    column.classList.remove("highlight");
+
+                }
+            );
+
+            column.addEventListener(
+                "drop",
+                function () {
+
+                    const columnId = column.id;
+
+                    Todo = Todo.map(function (Todo) {
+
+                        if (Todo.id === draggedTodoId) {
+
+                            return {
+                                ...Todo,
+                                status: columnId
+                            };
+
+                        }
+
+                        return Todo;
+
+                    });
+
+                    saveTodo();
+
+                    renderTodo();
+
+                    column.classList.remove("highlight");
+
+                }
+            );
+
+        });
+
+        renderTodo();
+
+    </script>
+
+</body>
+
+</html>
